@@ -1,0 +1,8 @@
+flask
+pandas
+numpy
+scikit-learn
+statsmodels
+xgboost
+prophet
+tensorflow-cpu
