@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarIQ — Smart Energy Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:        #050a0e;
+    --surface:   #0c1821;
+    --surface2:  #112030;
+    --border:    rgba(255,180,0,0.12);
+    --gold:      #f5a623;
+    --gold2:     #ffcc44;
+    --teal:      #00d4aa;
+    --red:       #ff4d6d;
+    --text:      #e8f4f0;
+    --muted:     #6b8fa0;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(245,166,35,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 110%, rgba(0,212,170,0.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── LOGIN PAGE ── */
+  #loginPage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    background: var(--bg);
+  }
+
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 52px 48px;
+    width: 420px;
+    text-align: center;
+    animation: fadeUp 0.6s ease;
+  }
+
+  .login-logo {
+    font-family: var(--font-head);
+    font-size: 52px;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+
+  .login-sub {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 8px 0 36px;
+  }
+
+  .login-box label {
+    display: block;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .login-box input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    margin-bottom: 20px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .login-box input:focus { border-color: var(--gold); }
+
+  .btn-primary {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border: none;
+    border-radius: 10px;
+    color: #000;
+    font-family: var(--font-head);
+    font-size: 20px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* ── MAIN APP ── */
+  #mainApp { display: none; position: relative; z-index: 1; }
+
+  /* NAVBAR */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,10,14,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .nav-logo {
+    font-family: var(--font-head);
+    font-size: 28px;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .nav-logo span { color: var(--teal); -webkit-text-fill-color: var(--teal); }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .nav-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .nav-avatar {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, var(--gold), var(--teal));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 13px; color: #000;
+  }
+
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font-body);
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .btn-logout:hover { color: var(--red); border-color: var(--red); }
+
+  /* HERO STRIP */
+  .hero {
+    padding: 36px 40px 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .hero-title {
+    font-family: var(--font-head);
+    font-size: 48px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .hero-title span { color: var(--gold); }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+
+  .model-badge {
+    display: flex;
+    gap: 12px;
+  }
+
+  .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+  }
+
+  .badge-val {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--teal);
+  }
+
+  .badge-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+    padding: 0 40px 40px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    width: 14px; height: 2px;
+    background: var(--gold);
+    display: block;
+  }
+
+  /* FORM */
+  .form-row { margin-bottom: 18px; }
+
+  .form-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 7px;
+  }
+
+  .form-control {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-control:focus { border-color: var(--gold); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .btn-analyze {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border: none;
+    border-radius: 12px;
+    color: #000;
+    font-family: var(--font-head);
+    font-size: 22px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-analyze:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  .btn-analyze.loading { opacity: 0.7; pointer-events: none; }
+
+  /* METRIC CARDS */
+  .metrics-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .metric {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    transition: border-color 0.3s;
+  }
+
+  .metric:hover { border-color: var(--gold); }
+
+  .metric-val {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .metric-unit {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .metric-lbl {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 6px;
+  }
+
+  /* STATUS BANNER */
+  .status-banner {
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    transition: all 0.4s;
+  }
+
+  .status-banner.PEAK   { background: rgba(0,212,170,0.08); border-color: rgba(0,212,170,0.3); }
+  .status-banner.MODERATE { background: rgba(245,166,35,0.08); border-color: rgba(245,166,35,0.3); }
+  .status-banner.LOW    { background: rgba(255,77,109,0.08); border-color: rgba(255,77,109,0.3); }
+
+  .status-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulse 1.5s infinite;
+  }
+
+  .PEAK .status-dot   { background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+  .MODERATE .status-dot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+  .LOW .status-dot    { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  .status-text { font-size: 14px; }
+  .status-label { font-family: var(--font-mono); font-weight: 600; font-size: 12px; letter-spacing: 2px; }
+
+  /* BOTTOM ROW */
+  .bottom-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* TIMELINE */
+  .timeline-wrap {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    height: 80px;
+    padding-top: 10px;
+  }
+
+  .tl-bar {
+    flex: 1;
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    position: relative;
+  }
+
+  .tl-bar:hover { opacity: 0.8; }
+
+  .tl-bar.best { box-shadow: 0 0 10px var(--gold); }
+
+  .tl-label {
+    position: absolute;
+    bottom: -22px;
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+    font-family: var(--font-mono);
+  }
+
+  .tl-best-star {
+    position: absolute;
+    top: -18px;
+    font-size: 12px;
+  }
+
+  .timeline-outer { margin-bottom: 32px; }
+
+  /* SAVINGS */
+  .savings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .savings-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .savings-val {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--teal);
+  }
+
+  .savings-lbl {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* EFFICIENCY BAR */
+  .eff-bar-bg {
+    background: var(--surface2);
+    border-radius: 8px;
+    height: 12px;
+    margin: 10px 0 6px;
+    overflow: hidden;
+  }
+
+  .eff-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--gold), var(--teal));
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    width: 0%;
+  }
+
+  .eff-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+  }
+
+  /* PLACEHOLDER */
+  .placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .placeholder-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+  .placeholder-text { font-size: 13px; }
+
+  /* CHART */
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: -80px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: bottom 0.4s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .toast.show { bottom: 24px; }
+
+  /* LOADER */
+  .loader {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+
+  .anim { animation: fadeIn 0.4s ease; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+  /* DATASET INFO ROW */
+  .info-row {
+    display: flex;
+    gap: 10px;
+    padding: 12px 40px;
+    background: rgba(0,212,170,0.03);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+
+  .info-item { display: flex; gap: 6px; }
+  .info-val { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">SOLAR IQ</div>
+    <div class="login-sub">Smart Energy Scheduling System</div>
+    <label for="username">Username</label>
+    <input type="text" id="username" placeholder="Enter your name" autocomplete="off">
+    <button class="btn-primary" onclick="login()">ENTER DASHBOARD</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">SOLAR<span>IQ</span></div>
+    <div class="nav-right">
+      <div class="nav-user">
+        <div class="nav-avatar" id="navInitial">U</div>
+        <span id="navName">User</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">⏻ Logout</button>
+    </div>
+  </nav>
+
+  <!-- DATASET INFO STRIP -->
+  <div class="info-row" id="infoRow">
+    <div class="info-item">MODEL <span class="info-val">Gradient Boosting</span></div>
+    <div class="info-item">DATASET <span class="info-val" id="dsRecords">—</span> records</div>
+    <div class="info-item">R² <span class="info-val" id="dsR2">—</span></div>
+    <div class="info-item">MAE <span class="info-val" id="dsMae">—</span> W/m²</div>
+    <div class="info-item">AVG IRRADIANCE <span class="info-val" id="dsAvg">—</span> W/m²</div>
+    <div class="info-item">PEAK <span class="info-val" id="dsPeak">—</span> W/m²</div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <div class="hero-title">SMART SOLAR <span>SCHEDULER</span></div>
+      <div class="hero-sub">ML-powered appliance scheduling based on real solar prediction</div>
+    </div>
+    <div class="model-badge">
+      <div class="badge">
+        <div class="badge-val" id="heroIrr">—</div>
+        <div class="badge-lbl">W/m² Now</div>
+      </div>
+      <div class="badge">
+        <div class="badge-val" id="heroEff">—</div>
+        <div class="badge-lbl">Efficiency %</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="grid">
+
+    <!-- INPUT CARD -->
+    <div class="card" style="grid-row: 1 / 3;">
+      <div class="card-title">Input Parameters</div>
+
+      <div class="form-row">
+        <label class="form-label">Appliance</label>
+        <select class="form-control" id="appliance">
+          <option>EV Charging</option>
+          <option>Washing Machine</option>
+          <option>Air Conditioner</option>
+          <option>Water Heater</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Hour of Day (0–23)</label>
+        <input class="form-control" type="number" id="hour" min="0" max="23" placeholder="e.g. 14">
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label">Temperature (°C)</label>
+          <input class="form-control" type="number" id="temperature" placeholder="e.g. 32">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Humidity (%)</label>
+          <input class="form-control" type="number" id="humidity" placeholder="e.g. 55">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label">Cloud Cover (%)</label>
+          <input class="form-control" type="number" id="cloud_cover" placeholder="e.g. 20">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Wind Speed (m/s)</label>
+          <input class="form-control" type="number" id="wind_speed" placeholder="e.g. 5">
+        </div>
+      </div>
+
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
+        ANALYZE
+      </button>
+
+      <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--border);">
+        <div class="card-title">Efficiency Score</div>
+        <div class="eff-bar-bg"><div class="eff-bar-fill" id="effFill"></div></div>
+        <div class="eff-labels">
+          <span>0%</span>
+          <span id="effVal">—</span>
+          <span>100%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: STATUS + METRICS -->
+    <div class="card">
+      <div class="card-title">Prediction Output</div>
+
+      <!-- Status -->
+      <div class="status-banner" id="statusBanner">
+        <div class="placeholder">
+          <div class="placeholder-icon">☀️</div>
+          <div class="placeholder-text">Enter parameters and click Analyze</div>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-strip" id="metricsStrip" style="display:none">
+        <div class="metric">
+          <div class="metric-val" id="mIrr" style="color:var(--gold)">—</div>
+          <div class="metric-unit">W/m²</div>
+          <div class="metric-lbl">Irradiance</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" id="mPanel" style="color:var(--teal)">—</div>
+          <div class="metric-unit">kWh</div>
+          <div class="metric-lbl">Panel Output</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" id="mNet">—</div>
+          <div class="metric-unit">kWh</div>
+          <div class="metric-lbl">Net Energy</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" id="mCO2" style="color:var(--teal)">—</div>
+          <div class="metric-unit">kg</div>
+          <div class="metric-lbl">CO₂ Saved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div class="bottom-grid">
+
+      <!-- Timeline -->
+      <div class="card">
+        <div class="card-title">Day Timeline — Solar Irradiance</div>
+        <div id="timelineWrap">
+          <div class="placeholder">
+            <div class="placeholder-icon">📊</div>
+            <div class="placeholder-text">Run analysis to see hourly forecast</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Savings -->
+      <div class="card">
+        <div class="card-title">Estimated Savings & Insight</div>
+        <div id="savingsWrap">
+          <div class="placeholder">
+            <div class="placeholder-icon">💡</div>
+            <div class="placeholder-text">Savings will appear after analysis</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">🔔 <span id="toastMsg"></span></div>
+
+<script>
+// ── AUTH ──
+function login() {
+  const name = document.getElementById("username").value.trim();
+  if (!name) { alert("Please enter a username"); return; }
+  document.getElementById("loginPage").style.display = "none";
+  document.getElementById("mainApp").style.display = "block";
+  document.getElementById("navName").textContent = name;
+  document.getElementById("navInitial").textContent = name[0].toUpperCase();
+  loadStats();
+}
+
+function logout() { location.reload(); }
+
+// ── LOAD DATASET STATS ──
+async function loadStats() {
+  try {
+    const r = await fetch("/api/stats");
+    const d = await r.json();
+    document.getElementById("dsRecords").textContent = d.total_records.toLocaleString();
+    document.getElementById("dsR2").textContent = d.model_r2;
+    document.getElementById("dsMae").textContent = d.model_mae;
+    document.getElementById("dsAvg").textContent = d.avg_irradiance;
+    document.getElementById("dsPeak").textContent = d.peak_irradiance;
+  } catch(e) { console.log("Stats load failed", e); }
+}
+
+// ── ANALYZE ──
+let chartInstance = null;
+
+async function analyze() {
+  const hour = document.getElementById("hour").value;
+  const temp = document.getElementById("temperature").value;
+  const humidity = document.getElementById("humidity").value;
+  const cloud = document.getElementById("cloud_cover").value;
+  const wind = document.getElementById("wind_speed").value;
+  const appliance = document.getElementById("appliance").value;
+
+  if (!hour || !temp || !humidity || !cloud || !wind) {
+    showToast("⚠️ Please fill all fields");
+    return;
+  }
+
+  const btn = document.getElementById("analyzeBtn");
+  btn.classList.add("loading");
+  btn.innerHTML = '<span class="loader"></span>ANALYZING...';
+
+  try {
+    const r = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hour, temperature: temp, humidity, cloud_cover: cloud, wind_speed: wind, appliance })
+    });
+    const d = await r.json();
+    renderResults(d);
+  } catch(e) {
+    showToast("❌ Server error — is Flask running?");
+    console.error(e);
+  }
+
+  btn.classList.remove("loading");
+  btn.innerHTML = "ANALYZE";
+}
+
+function renderResults(d) {
+  const c = d.current;
+
+  // Hero badges
+  document.getElementById("heroIrr").textContent = c.irradiance;
+  document.getElementById("heroEff").textContent = c.efficiency + "%";
+
+  // Efficiency bar
+  document.getElementById("effFill").style.width = c.efficiency + "%";
+  document.getElementById("effVal").textContent = c.efficiency + "%";
+
+  // Status banner
+  const banner = document.getElementById("statusBanner");
+  const colors = { PEAK: "var(--teal)", MODERATE: "var(--gold)", LOW: "var(--red)" };
+  banner.className = "status-banner anim " + d.status;
+  banner.innerHTML = `
+    <div class="status-dot"></div>
+    <div>
+      <div class="status-label" style="color:${colors[d.status]}">${d.status}</div>
+      <div class="status-text">${d.status_msg}</div>
+    </div>
+  `;
+
+  // Metrics
+  const ms = document.getElementById("metricsStrip");
+  ms.style.display = "grid";
+  document.getElementById("mIrr").textContent = c.irradiance;
+  document.getElementById("mPanel").textContent = c.panel_kwh;
+  const netEl = document.getElementById("mNet");
+  netEl.textContent = c.net_kwh;
+  netEl.style.color = c.net_kwh >= 0 ? "var(--teal)" : "var(--red)";
+  document.getElementById("mCO2").textContent = d.co2_saved;
+
+  // Timeline
+  renderTimeline(d.timeline, d.best_hour);
+
+  // Savings
+  renderSavings(d);
+
+  // Toast
+  showToast(`⭐ Best time today: ${d.best_hour}:00`);
+}
+
+function renderTimeline(timeline, bestHour) {
+  const maxIrr = Math.max(...timeline.map(t => t.irradiance));
+  let html = '<div class="timeline-outer"><div class="timeline-wrap">';
+
+  timeline.forEach(t => {
+    const pct = maxIrr > 0 ? (t.irradiance / maxIrr) * 100 : 0;
+    const isBest = t.hour === bestHour;
+    const col = t.irradiance > 700 ? "var(--teal)" : t.irradiance > 400 ? "var(--gold)" : "var(--red)";
+
+    html += `<div class="tl-bar${isBest ? " best" : ""}"
+      style="height:${Math.max(pct,5)}%; background:${col}; opacity:${isBest ? 1 : 0.6}"
+      title="${t.hour}:00 — ${t.irradiance} W/m²">
+      ${isBest ? '<span class="tl-best-star">⭐</span>' : ''}
+      <span class="tl-label">${t.hour}</span>
+    </div>`;
+  });
+
+  html += '</div></div>';
+
+  // Legend
+  html += `<div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--muted);font-family:var(--font-mono)">
+    <span><span style="color:var(--teal)">■</span> Peak &gt;700</span>
+    <span><span style="color:var(--gold)">■</span> Moderate 400–700</span>
+    <span><span style="color:var(--red)">■</span> Low &lt;400</span>
+    <span style="margin-left:auto">Best hour: <span style="color:var(--gold)">${bestHour}:00</span></span>
+  </div>`;
+
+  document.getElementById("timelineWrap").innerHTML = html;
+}
+
+function renderSavings(d) {
+  document.getElementById("savingsWrap").innerHTML = `
+    <div class="anim">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">
+        Appliance: <strong style="color:var(--text)">${document.getElementById("appliance").value}</strong>
+        &nbsp;·&nbsp; Load: <strong style="color:var(--gold)">${(d.appliance_watt/1000).toFixed(1)} kW</strong>
+      </div>
+      <div class="savings-row">
+        <div class="savings-box">
+          <div class="savings-val">₹${d.daily_savings}</div>
+          <div class="savings-lbl">Today's Saving</div>
+        </div>
+        <div class="savings-box">
+          <div class="savings-val">₹${d.monthly_savings}</div>
+          <div class="savings-lbl">Monthly Saving</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">
+          Recommendation
+        </div>
+        <div style="font-size:14px;line-height:1.5">
+          ${getRecommendation(d)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getRecommendation(d) {
+  if (d.status === "PEAK")
+    return `✅ <strong>Run your appliance now.</strong> Solar output is at peak — you'll maximize savings and minimize grid dependency.`;
+  if (d.status === "MODERATE")
+    return `⏳ <strong>Consider waiting until ${d.best_hour}:00</strong> for peak solar output. You'll gain an extra ${((d.current.panel_kwh || 0) * 0.2).toFixed(2)} kWh of savings.`;
+  return `❌ <strong>Avoid running now.</strong> Solar generation is too low. Reschedule to <strong>${d.best_hour}:00</strong> for best results.`;
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  document.getElementById("toastMsg").textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 4000);
+}
+
+// ── ENTER KEY ──
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && document.getElementById("mainApp").style.display !== "none") analyze();
+});
+</script>
+</body>
+</html>
